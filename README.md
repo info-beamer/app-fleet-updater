@@ -1,6 +1,6 @@
 # info-beamer device fleet updater
 
-This small app implements a rolling upgrade for all devices within an info-beamer account.
+This small app implements a rolling OS upgrade for all devices within an info-beamer account.
 It also serves as a basic [OAuth2 based app](https://info-beamer.com/doc/oauth) example
 integrating into the [info-beamer hosted digital signage platform](https://info-beamer.com).
 

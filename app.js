@@ -355,7 +355,7 @@ Vue.component('fleet-upgrader', {
   template: `
     <div class='upgrader'>
       <div class='centered'>
-        <h1>Fleet Upgrader</h1>
+        <h1>Fleet Updater</h1>
       </div>
       <login-ui v-if='!$store.getters.is_logged_in'/>
       <upgrader-ui v-else/>
