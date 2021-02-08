@@ -4,6 +4,7 @@
 
 (async () => {
 const config = window.CONFIG
+const STATE_PREFIX = 'fleet-updater'
 
 function parse_query_string(qs) {
   if (qs == "") { return {} }
@@ -42,11 +43,11 @@ async function pkce_verifier_to_challenge(v) {
 
 async function redirect_to_authorization() {
   const state = random()
-  localStorage.setItem("pkce_state", state)
+  localStorage.setItem(`${STATE_PREFIX}:pkce_state`, state)
 
   // Create and store a new PKCE code_verifier (the plaintext random secret)
   const code_verifier = random()
-  localStorage.setItem("pkce_code_verifier", code_verifier)
+  localStorage.setItem(`${STATE_PREFIX}:pkce_code_verifier`, code_verifier)
 
   // Hash and base64-urlencode the secret to use as the challenge
   const code_challenge = await pkce_verifier_to_challenge(code_verifier)
@@ -70,14 +71,14 @@ async function handle_url_params() {
 
   // Special case when info-beamer hosted redirected to this app.
   // If we don't have an access token, initiate authorization flow.
-  if (q.source == "ib" && !localStorage.getItem('access_token'))
+  if (q.source == "ib" && !localStorage.getItem(`${STATE_PREFIX}:access_token`))
     return redirect_to_authorization()
 
   // If there's no oauth 'state' parameter, there's nothing to do.
   if (!q.state)
     return
 
-  if (localStorage.getItem("pkce_state") != q.state) {
+  if (localStorage.getItem(`${STATE_PREFIX}:pkce_state`) != q.state) {
     // If the state doesn't match the locally saved state,
     // we have to abort the flow. Someone might have started
     // it without our knowledge.
@@ -92,16 +93,16 @@ async function handle_url_params() {
       code: q.code,
       client_id: config.client_id,
       redirect_uri: config.redirect_uri,
-      code_verifier: localStorage.getItem("pkce_code_verifier")
+      code_verifier: localStorage.getItem(`${STATE_PREFIX}:pkce_code_verifier`)
     })
 
     // Save retrieved access_token. The app can start init it with.
-    localStorage.setItem('access_token', resp.data.access_token)
+    localStorage.setItem(`${STATE_PREFIX}:access_token`, resp.data.access_token)
   }
 
   // Clean these up since we don't need them anymore
-  localStorage.removeItem("pkce_state")
-  localStorage.removeItem("pkce_code_verifier")
+  localStorage.removeItem(`${STATE_PREFIX}:pkce_state`)
+  localStorage.removeItem(`${STATE_PREFIX}:pkce_code_verifier`)
   window.history.replaceState({}, null, config.app_root)
 }
 
@@ -126,7 +127,7 @@ const store = new Vuex.Store({
   },
   mutations: {
     init(state) {
-      state.access_token = localStorage.getItem('access_token')
+      state.access_token = localStorage.getItem(`${STATE_PREFIX}:access_token`)
     },
     set_login(state, info) {
       state.info = info
@@ -134,7 +135,7 @@ const store = new Vuex.Store({
     wipe(state) {
       state.access_token = null
       state.info = null
-      localStorage.removeItem('access_token')
+      localStorage.removeItem(`${STATE_PREFIX}:access_token`)
       window.location.href = config.app_root
     },
     ready(state) {
