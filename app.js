@@ -252,18 +252,19 @@ Vue.component('upgrader-ui', {
       for (let device of devices) {
         if (!device.is_online) {
           offline++
-          continue
-        }
-        if (device.upgrade.blocked > 0) {
+        } else if (device.upgrade.blocked > 0) {
           blocked++
-          continue
-        }
-        let latest_version = this.channels[device.run.channel].version
-        if (device.run.version == latest_version) {
+        } else if (
+            // either newer version in current channel
+            device.run.version != this.channels[device.run.channel].version ||
+
+            // or it's testing and there's a newer stable channel version
+            (device.run.channel == 'testing' && this.channels['stable'].version >= device.run.version)
+        ) {
+          this.upgradable.push(device)
+        } else {
           up_to_date++
-          continue
         }
-        this.upgradable.push(device)
       }
       if (offline > 0)
         this.add_log(`  ${offline}/${devices.length} devices are offline at the moment`)
@@ -288,7 +289,7 @@ Vue.component('upgrader-ui', {
         this.add_log(`Upgrading device ${device.serial}`)
         this.add_log(`  ${device.description}`)
         let channel = device.run.channel
-        if (channel == 'testing' && this.channels['stable'].version > device.run.version) {
+        if (channel == 'testing' && this.channels['stable'].version >= device.run.version) {
           // newer stable version available. switch to stable
           channel = 'stable'
         }
