@@ -296,7 +296,7 @@ Vue.component('upgrader-ui', {
         this.add_log(`  Upgrading to latest release in ${channel} channel`)
         try {
           let r = await Vue.http.post(`device/${device.id}/channel`, {
-            channel: device.run.channel,
+            channel: channel
           })
           let resp = await r.json()
           if (!resp.ok) {
