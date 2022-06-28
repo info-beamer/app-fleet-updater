@@ -48,12 +48,12 @@
     <script>
       window.CONFIG = {
         client_id: "f58dc2f599f9842396249776cfece518",
-        redirect_uri: "https://info-beamer.github.io/app-fleet-updater/",
+        redirect_uri: window.location.origin + window.location.pathname,
         authorization_endpoint: "https://info-beamer.com/oauth/authorize",
         token_endpoint: "https://info-beamer.com/oauth/token",
         requested_scopes: "info device:full",
         api_root: "https://info-beamer.com/api/v1/",
-        app_root: "/app-fleet-updater/",
+        app_root: window.location.pathname,
       }
     </script>
     <script src="vue.js"></script>

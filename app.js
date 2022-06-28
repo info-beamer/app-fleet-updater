@@ -1,5 +1,5 @@
 'use strict';
-// The oauth2 code is partly based on 
+// The oauth2 code is partly based on
 // https://github.com/aaronpk/pkce-vanilla-js
 
 (async () => {
@@ -53,7 +53,7 @@ async function redirect_to_authorization() {
   const code_challenge = await pkce_verifier_to_challenge(code_verifier)
 
   // Build the authorization URL
-  const url = config.authorization_endpoint 
+  const url = config.authorization_endpoint
       + "?response_type=code"
       + "&client_id="+encodeURIComponent(config.client_id)
       + "&state="+encodeURIComponent(state)
@@ -248,23 +248,39 @@ Vue.component('upgrader-ui', {
       r = await Vue.http.get('device/list')
       let devices = (await r.json()).devices
 
-      let up_to_date = 0, offline = 0, blocked = 0
+      let up_to_date = 0, offline = 0, blocked = 0, delayed = 0
       for (let device of devices) {
         if (!device.is_online) {
           offline++
-        } else if (device.upgrade.blocked > 0) {
-          blocked++
-        } else if (
-            // either newer version in current channel
-            device.run.version != this.channels[device.run.channel].version ||
-
-            // or it's testing and there's a newer stable channel version
-            (device.run.channel == 'testing' && this.channels['stable'].version >= device.run.version)
-        ) {
-          this.upgradable.push(device)
-        } else {
-          up_to_date++
+          continue
         }
+
+        if (device.upgrade.blocked > 0) {
+          blocked++
+          continue
+        }
+
+        // either newer version in current channel..
+        const new_version = device.run.version != this.channels[device.run.channel].version
+
+        // ..or it's testing and there's a newer stable channel version
+        const new_stable = device.run.channel == 'testing' && this.channels['stable'].version >= device.run.version
+
+        if (!new_version && !new_stable) {
+          up_to_date++
+          continue
+        }
+
+        // suggested target channel
+        const target_channel = new_stable ? 'stable' : device.run.channel
+        const target_age_days = (+new Date()/1000 - this.channels[target_channel].created) / 86400
+
+        if (target_channel == 'stable' && target_age_days < 31) {
+          delayed++
+          continue
+        }
+
+        this.upgradable.push([device, target_channel])
       }
       if (offline > 0)
         this.add_log(`  ${offline}/${devices.length} devices are offline at the moment`)
@@ -272,6 +288,8 @@ Vue.component('upgrader-ui', {
         this.add_log(`  ${up_to_date}/${devices.length} already at latest release`)
       if (blocked > 0)
         this.add_log(`  ${blocked}/${devices.length} marked to not upgrade`)
+      if (delayed > 0)
+        this.add_log(`  ${delayed}/${devices.length} is not upgraded yet as release is too new`)
       this.add_log(`  ${this.upgradable.length}/${devices.length} can be upgraded`)
 
       if (this.upgradable.length > 0) {
@@ -285,14 +303,9 @@ Vue.component('upgrader-ui', {
     async upgrade() {
       this.state = 'upgrading'
       while (this.state == 'upgrading' && this.upgradable.length > 0) {
-        let device = this.upgradable.shift()
+        const [device, channel] = this.upgradable.shift()
         this.add_log(`Upgrading device ${device.serial}`)
         this.add_log(`  ${device.description}`)
-        let channel = device.run.channel
-        if (channel == 'testing' && this.channels['stable'].version >= device.run.version) {
-          // newer stable version available. switch to stable
-          channel = 'stable'
-        }
         this.add_log(`  Upgrading to latest release in ${channel} channel`)
         try {
           let r = await Vue.http.post(`device/${device.id}/channel`, {
